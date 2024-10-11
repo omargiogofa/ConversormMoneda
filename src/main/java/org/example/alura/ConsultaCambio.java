@@ -1,20 +1,20 @@
 package org.example.alura;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-
 public class ConsultaCambio {
-    private static final String API_URL = "https://v6.exchangerate-api.com/v6/878d671a848e06df0bd9a534/latest"; // Cambia la clave por la tuya
+    private static final String API_KEY = "878d671a848e06df0bd9a534"; // La clave API
+    private static final String API_URL = "https://v6.exchangerate-api.com/v6/" + API_KEY + "/latest"; // URL completa con clave API
 
     public Moneda buscaMoneda(String baseCurrency) {
         try {
-            String jsonResponse = getApiResponse(baseCurrency);
+            String jsonResponse = getApiResponse(baseCurrency); // Cambia aquí para usar la moneda base
             Moneda moneda = parseJsonToMoneda(jsonResponse);
 
             if (moneda == null || moneda.getConversionRates() == null || moneda.getConversionRates().isEmpty()) {
@@ -22,29 +22,27 @@ public class ConsultaCambio {
             }
 
             return moneda;
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             throw new RuntimeException("Error al consultar la API: " + e.getMessage());
         }
     }
 
-    private String getApiResponse(String baseCurrency) throws IOException {
-        URL url = new URL(API_URL + "/" + baseCurrency);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
+    private String getApiResponse(String baseCurrency) throws IOException, InterruptedException {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL + "/" + baseCurrency)) // Cambia la URL para que use el tipo de moneda base correcto
+                .GET()
+                .build();
 
-        if (conn.getResponseCode() != 200) {
-            throw new RuntimeException("Error en la conexión: " + conn.getResponseCode());
+        // Manejo de la respuesta
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // Manejo de errores de conexión
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("Error en la conexión: " + response.statusCode());
         }
 
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-            StringBuilder response = new StringBuilder();
-            String inputLine;
-
-            while ((inputLine = in.readLine()) != null) {
-                response.append(inputLine);
-            }
-            return response.toString();
-        }
+        return response.body();
     }
 
     private Moneda parseJsonToMoneda(String jsonResponse) {

@@ -16,6 +16,8 @@ public class Swing extends JFrame {
     private JComboBox<String> monedaDestinoCombo;
     private JTextField valorInput;
     private JLabel resultadoLabel;
+    private JButton convertirBtn;
+    private double valorOriginal; // Variable para almacenar el valor original
 
     public Swing() {
         try {
@@ -36,7 +38,7 @@ public class Swing extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(5, 2)); // 5 filas y 2 columnas
+        panel.setLayout(new GridLayout(6, 2)); // 6 filas y 2 columnas
 
         // Crear componentes
         JLabel monedaOrigenLabel = new JLabel("Moneda Origen:");
@@ -48,8 +50,11 @@ public class Swing extends JFrame {
         monedaDestinoCombo = new JComboBox<>(rates.keySet().toArray(new String[0]));
         valorInput = new JTextField();
 
-        JButton convertirBtn = new JButton("Convertir");
+        convertirBtn = new JButton("Convertir");
         convertirBtn.addActionListener(e -> convertirMoneda());
+
+        JButton revertirBtn = new JButton("Revertir Conversión");
+        revertirBtn.addActionListener(e -> revertirConversion());
 
         // Añadir componentes al panel
         panel.add(monedaOrigenLabel);
@@ -60,6 +65,7 @@ public class Swing extends JFrame {
         panel.add(valorInput);
         panel.add(new JLabel()); // Espacio vacío
         panel.add(convertirBtn);
+        panel.add(revertirBtn); // Añadir botón para revertir conversión
         panel.add(new JLabel("Resultado:"));
         panel.add(resultadoLabel);
 
@@ -71,14 +77,20 @@ public class Swing extends JFrame {
         try {
             String monedaOrigen = (String) monedaOrigenCombo.getSelectedItem();
             String monedaDestino = (String) monedaDestinoCombo.getSelectedItem();
-            double valor = Double.parseDouble(valorInput.getText());
+            valorOriginal = Double.parseDouble(valorInput.getText().trim()); // Guardar valor original
+
+            // Verificar que el valor ingresado no sea negativo
+            if (valorOriginal < 0) {
+                mostrarError("El valor a convertir no puede ser negativo.");
+                return;
+            }
 
             double tasaOrigen = rates.get(monedaOrigen);
             double tasaDestino = rates.get(monedaDestino);
 
             // Realizar la conversión
-            double valorConvertido = (valor / tasaOrigen) * tasaDestino;
-            resultadoLabel.setText(String.format("%.4f", valorConvertido));
+            double valorConvertido = (valorOriginal / tasaOrigen) * tasaDestino;
+            resultadoLabel.setText(String.format("%.4f %s", valorConvertido, monedaDestino));
         } catch (NumberFormatException e) {
             mostrarError("Por favor ingresa un valor numérico válido.");
         } catch (Exception e) {
@@ -86,12 +98,17 @@ public class Swing extends JFrame {
         }
     }
 
+    private void revertirConversion() {
+        // Mostrar el valor original en la etiqueta de resultado
+        resultadoLabel.setText(String.format("%.4f %s", valorOriginal, monedaOrigenCombo.getSelectedItem()));
+    }
+
     private void mostrarError(String mensaje) {
         JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     private Map<String, Double> obtenerTasasCambio() throws Exception {
-        String url = "https://v6.exchangerate-api.com/v6/878d671a848e06df0bd9a534/latest/USD"; // URL de la API
+        String url = "https://v6.exchangerate-api.com/v6/878d671a848e06df0bd9a534/latest/COP";
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setRequestMethod("GET");
 
